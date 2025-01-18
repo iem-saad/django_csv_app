@@ -123,6 +123,9 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CELERY_BROKER_URL = 'redis://redis:6379/0'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://redis:6379/0'  # Redis as the message broker
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'  # Redis as the result backend
+CELERY_ACCEPT_CONTENT = ['json']  # Accept content in JSON format
+CELERY_TASK_SERIALIZER = 'json'  # Serialize tasks in JSON format
+CELERY_RESULT_EXTENDED = True  # Enable extended task results (optional)
