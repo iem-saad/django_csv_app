@@ -1,45 +1,67 @@
 import csv
 import io
+import re
 from celery import shared_task
 from .models import UploadedCSV, DerivedCSV, CSVChanges
 from datetime import datetime
 from django.contrib.contenttypes.models import ContentType
 import copy
+import json
+from .utils import send_csv_email
 
 @shared_task
 def process_csv(uploaded_csv_id):
     """
     Celery task to process the uploaded CSV:
-    Divide all integer columns by 2 and save as a DerivedCSV.
+    Normalize headers, infer schema, process integer columns, and save as a DerivedCSV.
     """
     try:
         uploaded_csv = UploadedCSV.objects.get(id=uploaded_csv_id)
-        original_data = uploaded_csv.content
+        raw_csv = json.loads(uploaded_csv.content)  # Load raw CSV string stored as JSON
 
-        # Extract schema
+        reader = csv.reader(io.StringIO(raw_csv))
+        rows = list(reader)
+
+        headers = rows[0]
+        normalized_headers = [
+            re.sub(r'[^\w\s]', '', col).strip().replace(' ', '_').lower() for col in headers
+        ]
+
+        normalized_data = []
+        for row in rows[1:]:
+            normalized_data.append(dict(zip(normalized_headers, row)))
+
         csv_content = "\n".join(
-            [",".join(original_data[0].keys())] + 
-            [",".join(str(value) for value in row.values()) for row in original_data]
+            [",".join(normalized_headers)] +
+            [",".join(str(value) for value in row.values()) for row in normalized_data]
         )
-
         schema = infer_schema(csv_content)
-        print(schema)
 
-        # Update the UploadedCSV with the schema
         uploaded_csv.schema = schema
+        uploaded_csv.content = normalized_data
         uploaded_csv.save()
 
         processed_data = []
-        for row in original_data:
+        for row in normalized_data:
             processed_row = {}
             for key, value in row.items():
-                if value.isdigit():
+                if schema[key] == "integer" and value.isdigit():
                     processed_row[key] = int(value) // 2
                 else:
                     processed_row[key] = value
             processed_data.append(processed_row)
 
         DerivedCSV.objects.create(parent=uploaded_csv, content=processed_data)
+
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=normalized_headers)
+        writer.writeheader()
+        writer.writerows(processed_data)
+        csv_attachment = output.getvalue()
+
+        subject = "Your Processed CSV is Ready!"
+        message = "The CSV you uploaded has been successfully processed. Please find the filtered CSV attached."
+        send_csv_email('testuser@gmail.com', subject, message, csv_attachment)
 
         uploaded_csv.status = 'processed'
         uploaded_csv.save()
@@ -48,6 +70,7 @@ def process_csv(uploaded_csv_id):
         print(f"UploadedCSV with ID {uploaded_csv_id} does not exist.")
     except Exception as e:
         print(f"Error processing CSV: {e}")
+
 
 def infer_schema(csv_content):
     """
@@ -132,3 +155,4 @@ def apply_csv_changes(changes_id):
         return f"CSVChanges with ID {changes_id} does not exist."
     except Exception as e:
         return f"Error applying CSVChanges {changes_id}: {e}"
+
