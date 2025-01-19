@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Visualize {{ is_derived|yesno:"Derived,Uploaded" }} CSV: {{ csv_entry.name }}</h2>
+
+<!-- Mode Selection -->
+<div class="mb-4">
+    <label for="visualizationMode">Select Visualization Mode:</label>
+    <select id="visualizationMode" class="form-select">
+        <option value="univariate">Univariate</option>
+        <option value="multivariate">Multivariate</option>
+    </select>
+</div>
+
+<!-- Univariate Configuration -->
+<div id="univariateConfig" class="mt-4">
+    <label for="uniColumn">Select Column:</label>
+    <select id="uniColumn" class="form-select">
+        {% for col, col_type in allowed_columns.items %}
+        <option value="{{ col }}">{{ col }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- Multivariate Configuration -->
+<div id="multivariateConfig" class="mt-4" style="display: none;">
+    <label for="chartType">Select Chart Type:</label>
+    <select id="chartType" class="form-select">
+        <option value="scatter">Scatter Plot</option>
+        <option value="line">Line Chart</option>
+        <option value="bar">Bar Chart</option>
+    </select>
+
+    <label for="xAxis" class="mt-2">Select X-Axis:</label>
+    <select id="xAxis" class="form-select">
+        {% for col, col_type in allowed_columns.items %}
+        <option value="{{ col }}">{{ col }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="yAxis" class="mt-2">Select Y-Axis:</label>
+    <select id="yAxis" class="form-select">
+        {% for col, col_type in allowed_columns.items %}
+        <option value="{{ col }}">{{ col }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<canvas id="chartCanvas" width="800" height="400"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const content = {{ content|safe }};
+    const ctx = document.getElementById('chartCanvas').getContext('2d');
+    let chart;
+
+    // Toggle configuration panels based on the selected mode
+    document.getElementById('visualizationMode').addEventListener('change', (e) => {
+        const mode = e.target.value;
+        document.getElementById('univariateConfig').style.display = (mode === 'univariate') ? 'block' : 'none';
+        document.getElementById('multivariateConfig').style.display = (mode === 'multivariate') ? 'block' : 'none';
+        updateChart();
+    });
+
+    function updateChart() {
+        const mode = document.getElementById('visualizationMode').value;
+
+        // Destroy the old chart if it exists
+        if (chart) chart.destroy();
+
+        if (mode === 'univariate') {
+            const column = document.getElementById('uniColumn').value;
+            const data = content.map(row => row[column]);
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({ length: data.length }, (_, i) => i + 1),
+                    datasets: [{
+                        label: column,
+                        data: data,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        hoverBackgroundColor: 'rgba(75, 192, 192, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        title: {
+                            display: true,
+                            text: `Univariate Analysis: ${column}`,
+                        }
+                    },
+                    hover: {
+                        mode: 'nearest',
+                        intersect: true,
+                    }
+                }
+            });
+        } else if (mode === 'multivariate') {
+            const chartType = document.getElementById('chartType').value;
+            const xAxis = document.getElementById('xAxis').value;
+            const yAxis = Array.from(document.getElementById('yAxis').selectedOptions).map(option => option.value);
+
+            const labels = content.map(row => row[xAxis]);
+            const datasets = yAxis.map((col, idx) => ({
+                label: col,
+                data: content.map(row => parseFloat(row[col])),
+                borderWidth: 2,
+                backgroundColor: `rgba(${75 + idx * 30}, ${192 - idx * 20}, 192, 0.6)`,
+                borderColor: `rgba(${75 + idx * 30}, ${192 - idx * 20}, 192, 1)`,
+                hoverBackgroundColor: `rgba(${75 + idx * 30}, ${192 - idx * 20}, 192, 0.8)`
+            }));
+
+            chart = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        title: {
+                            display: true,
+                            text: `Multivariate Analysis: ${xAxis} vs ${yAxis.join(', ')}`,
+                        }
+                    },
+                    hover: {
+                        mode: 'nearest',
+                        intersect: true,
+                    }
+                }
+            });
+        }
+    }
+
+    document.getElementById('uniColumn').addEventListener('change', updateChart);
+    document.getElementById('chartType').addEventListener('change', updateChart);
+    document.getElementById('xAxis').addEventListener('change', updateChart);
+    document.getElementById('yAxis').addEventListener('change', updateChart);
+
+    // Render initial chart
+    updateChart();
+</script>
+{% endblock %}

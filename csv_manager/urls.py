@@ -12,4 +12,5 @@ urlpatterns = [
     path('view_csv/<int:csv_id>/', views.view_csv, name='view_csv'),
     path('view_csv/<int:csv_id>/derived/', views.view_csv, {'is_derived': True}, name='view_csv_derived'),
     path('add_data_csv/<int:csv_id>/', views.add_data_to_csv, name='add_data_csv'),
+    path('visualize_csv/<int:csv_id>/', views.visualize_csv, name='visualize_csv'),
 ]

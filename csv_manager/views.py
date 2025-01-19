@@ -153,3 +153,27 @@ def add_data_to_csv(request, csv_id):
 	    return redirect("my_csvs")
 
     return render(request, "csv_manager/add_data_csv.html", {"csv_entry": csv_entry, "schema": schema, "is_derived": is_derived})
+
+def visualize_csv(request, csv_id):
+    """
+    View to visualize either an UploadedCSV or a DerivedCSV.
+    """
+    is_derived = request.GET.get('is_derived', '0') == '1'
+    if is_derived:
+        csv_entry = get_object_or_404(DerivedCSV, id=csv_id)
+        content = csv_entry.content
+        schema = csv_entry.parent.schema
+    else:
+        csv_entry = get_object_or_404(UploadedCSV, id=csv_id)
+        content = csv_entry.content
+        schema = csv_entry.schema
+
+    allowed_columns = {col: col_type for col, col_type in schema.items() if col_type != 'string'}
+
+    return render(request, 'csv_manager/visualize_csv.html', {
+        'csv_entry': csv_entry,
+        'content': content,
+        'schema': schema,
+        'allowed_columns': allowed_columns,
+        'is_derived': is_derived
+    })

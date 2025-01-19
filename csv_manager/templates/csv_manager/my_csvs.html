@@ -18,6 +18,7 @@
                     <a href="{% url 'view_csv' csv.id %}" class="btn btn-sm text-white btn-info">View</a>
                     <a href="{% url 'download_csv' csv.id %}" class="btn btn-sm btn-primary">Download Uploaded CSV</a>
                     <a href="{% url 'add_data_csv' csv.id %}?is_derived=0" class="btn btn-sm btn-warning">Add Data</a>
+                    <a href="{% url 'visualize_csv' csv.id %}?is_derived=0" class="btn btn-sm btn-warning">Visualize</a>
                     <button class="btn btn-sm btn-danger" onclick="deleteFile({{ csv.id }}, false)">Delete Uploaded CSV</button>
                 </div>
                 {% if csv.derived_csvs.exists %}
@@ -30,6 +31,7 @@
                             <a href="{% url 'view_csv_derived' derived_csv.id %}" class="btn btn-sm text-white btn-info">View</a>
                             <a href="{% url 'download_derived_csv' derived_csv.id %}" class="btn btn-sm btn-success">Download</a>
                             <a href="{% url 'add_data_csv' derived_csv.id %}?is_derived=1" class="btn btn-sm btn-warning">Add Data</a>
+                            <a href="{% url 'visualize_csv' derived_csv.id %}?is_derived=1" class="btn btn-sm btn-warning">Visualize</a>
                             <button class="btn btn-sm btn-danger ms-2" onclick="deleteFile({{ derived_csv.id }}, true)">Delete</button>
                         </div>
                     </li>
