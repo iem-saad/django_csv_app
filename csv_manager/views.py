@@ -91,3 +91,14 @@ def delete_csv(request, csv_id, is_derived=False):
             return JsonResponse({'status': 'success', 'message': 'Uploaded CSV and its derived CSVs deleted successfully.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+def view_csv(request, csv_id, is_derived=False):
+    """
+    Render the contents of an UploadedCSV or DerivedCSV in a table.
+    """
+    if is_derived:
+        csv_entry = get_object_or_404(DerivedCSV, id=csv_id)
+    else:
+        csv_entry = get_object_or_404(UploadedCSV, id=csv_id)
+
+    return render(request, 'csv_manager/view_csv.html', {'csv_entry': csv_entry})

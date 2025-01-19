@@ -15,6 +15,7 @@
         <div id="collapse{{ csv.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ csv.id }}" data-bs-parent="#uploadedCSVsAccordion">
             <div class="accordion-body">
                 <div class="mb-3 d-flex justify-content-between">
+                    <a href="{% url 'view_csv' csv.id %}" class="btn btn-sm text-white btn-info">View</a>
                     <a href="{% url 'download_csv' csv.id %}" class="btn btn-sm btn-primary">Download Uploaded CSV</a>
                     <button class="btn btn-sm btn-danger" onclick="deleteFile({{ csv.id }}, false)">Delete Uploaded CSV</button>
                 </div>
@@ -25,6 +26,7 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         {{ csv.name }} ({{ derived_csv.id }}) - Processed on {{ derived_csv.created_at }}
                         <div>
+                            <a href="{% url 'view_csv_derived' derived_csv.id %}" class="btn btn-sm text-white btn-info">View</a>
                             <a href="{% url 'download_derived_csv' derived_csv.id %}" class="btn btn-sm btn-success">Download</a>
                             <button class="btn btn-sm btn-danger ms-2" onclick="deleteFile({{ derived_csv.id }}, true)">Delete</button>
                         </div>
