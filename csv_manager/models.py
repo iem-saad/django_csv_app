@@ -12,6 +12,7 @@ class UploadedCSV(models.Model):
 
     name = models.CharField(max_length=255)
     content = models.JSONField() # Parsed CSV content stored as JSON
+    schema = models.JSONField(null=True, blank=True)  # Schema extracted from the CSV
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,

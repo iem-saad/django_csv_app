@@ -9,7 +9,7 @@
     <div class="accordion-item">
         <h2 class="accordion-header" id="heading{{ csv.id }}">
             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ csv.id }}" aria-expanded="true" aria-controls="collapse{{ csv.id }}">
-                {{ csv.name }} ({{ csv.status|title }}) - Uploaded on {{ csv.created_at }}
+                ( {{ csv.id }} ) {{ csv.name }} ({{ csv.status|title }}) - Uploaded on {{ csv.created_at }}
             </button>
         </h2>
         <div id="collapse{{ csv.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ csv.id }}" data-bs-parent="#uploadedCSVsAccordion">
