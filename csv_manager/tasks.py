@@ -1,8 +1,10 @@
 import csv
 import io
 from celery import shared_task
-from .models import UploadedCSV, DerivedCSV
+from .models import UploadedCSV, DerivedCSV, CSVChanges
 from datetime import datetime
+from django.contrib.contenttypes.models import ContentType
+import copy
 
 @shared_task
 def process_csv(uploaded_csv_id):
@@ -100,3 +102,33 @@ def infer_schema(csv_content):
 @shared_task
 def test_celery_task(x, y):
     return x + y
+
+@shared_task
+def apply_csv_changes(changes_id):
+    """
+    Background job to apply changes from CSVChanges to the associated UploadedCSV or DerivedCSV.
+    Creates a new DerivedCSV with the updated content.
+    """
+    try:
+        csv_changes = CSVChanges.objects.get(id=changes_id)
+        associated_csv = csv_changes.csv_entry
+        original_content = associated_csv.content
+
+        updated_content = copy.deepcopy(original_content)
+
+        for row in csv_changes.data:
+            updated_content.append(row)
+
+        DerivedCSV.objects.create(
+            parent=associated_csv if isinstance(associated_csv, UploadedCSV) else associated_csv.parent,
+            content=updated_content
+        )
+
+        csv_changes.status = "processed"
+        csv_changes.save()
+
+        return f"CSVChanges {changes_id} applied successfully and new DerivedCSV created."
+    except CSVChanges.DoesNotExist:
+        return f"CSVChanges with ID {changes_id} does not exist."
+    except Exception as e:
+        return f"Error applying CSVChanges {changes_id}: {e}"

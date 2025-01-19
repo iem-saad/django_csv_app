@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Adding Data to: {{ csv_entry.name }}</h2>
+
+<!-- Data Table for Existing CSV Content -->
+<table id="csvTable" class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            {% for key in csv_entry.content.0.keys %}
+            <th>{{ key }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in csv_entry.content %}
+        <tr>
+            {% for value in row.values %}
+            <td>{{ value }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Dynamic Form for Adding New Rows -->
+<h3 class="mt-4">Add New Row</h3>
+<form method="POST" id="addRowsForm">
+    {% csrf_token %}
+    <div id="rowsContainer">
+        <!-- Template Row -->
+        <div class="row mb-3 dynamic-row">
+            {% for field, field_type in schema.items %}
+            <div class="col">
+                <label for="{{ field }}">{{ field }} ({{ field_type }})</label>
+                {% if field_type == "integer" %}
+                <input type="number" name="{{ field }}[]" class="form-control" required>
+                {% elif field_type == "float" %}
+                <input type="number" step="any" name="{{ field }}[]" class="form-control" required>
+                {% elif field_type == "date" %}
+                <input type="date" name="{{ field }}[]" class="form-control" required>
+                {% elif field_type == "datetime" %}
+                <input type="datetime-local" name="{{ field }}[]" class="form-control" required>
+                {% else %}
+                <input type="text" name="{{ field }}[]" class="form-control" required>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <button type="button" class="btn btn-secondary" id="addRowButton">Add Another Row</button>
+    <button type="submit" class="btn btn-primary mt-3">Save Rows</button>
+</form>
+
+<!-- Include Bootstrap DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Initialize DataTable
+        $('#csvTable').DataTable();
+
+        // Add a new dynamic row
+        $('#addRowButton').on('click', function () {
+            const newRow = $('.dynamic-row:first').clone(); // Clone the first row
+            newRow.find('input').val(''); // Clear values in the cloned row
+            $('#rowsContainer').append(newRow); // Append the new row to the container
+        });
+    });
+</script>
+
+{% if error %}
+<div class="alert alert-danger mt-3">{{ error }}</div>
+{% endif %}
+{% endblock %}

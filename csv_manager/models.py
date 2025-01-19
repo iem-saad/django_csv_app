@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 class UploadedCSV(models.Model):
     """
@@ -34,3 +36,25 @@ class DerivedCSV(models.Model):
 
     def __str__(self):
         return f"DerivedCSV from {self.parent.name} at {self.created_at}"
+
+
+class CSVChanges(models.Model):
+    """
+    Model to represent rows added to a CSV (UploadedCSV or DerivedCSV) before processing.
+    """
+    # Generic relation to either UploadedCSV or DerivedCSV
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    csv_entry = GenericForeignKey('content_type', 'object_id')
+
+    # Data fields
+    data = models.JSONField()  # Stores the new row as JSON
+    status = models.CharField(
+        max_length=20,
+        choices=[('pending', 'Pending'), ('processed', 'Processed')],
+        default='pending'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"CSVChanges (ID: {self.id}) for {self.csv_entry.name} - Status: {self.get_status_display()}"

@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
-from .models import UploadedCSV, DerivedCSV
+from .models import UploadedCSV, DerivedCSV, CSVChanges
+from django.contrib.contenttypes.models import ContentType
 from django.contrib import messages
 from mimetypes import guess_type
-from .tasks import process_csv
+from datetime import datetime
+from .tasks import process_csv, apply_csv_changes
 import csv
 import io
 
@@ -102,3 +104,55 @@ def view_csv(request, csv_id, is_derived=False):
         csv_entry = get_object_or_404(UploadedCSV, id=csv_id)
 
     return render(request, 'csv_manager/view_csv.html', {'csv_entry': csv_entry})
+
+def add_data_to_csv(request, csv_id):
+    """
+    Unified function to add data to either an UploadedCSV or a DerivedCSV.
+    """
+    is_derived = request.GET.get('is_derived', '0') == '1'
+    if is_derived:
+        csv_entry = get_object_or_404(DerivedCSV, id=csv_id)
+        schema = csv_entry.parent.schema
+    else:
+        csv_entry = get_object_or_404(UploadedCSV, id=csv_id)
+        schema = csv_entry.schema
+
+    if request.method == "POST":
+	    field_names = list(schema.keys())
+	    adjusted_field_names = [f"{field}[]" for field in field_names]
+	    num_rows = len(request.POST.getlist(adjusted_field_names[0]))  # Use adjusted field names
+	    new_rows = []
+
+	    for i in range(num_rows):
+	        new_row = {}
+	        for key, data_type in schema.items():
+	            value = request.POST.getlist(f"{key}[]")[i]  # Use adjusted field names
+	            try:
+	                if data_type == "integer":
+	                    value = int(value)
+	                elif data_type == "float":
+	                    value = float(value)
+	                elif data_type == "datetime":
+	                    value = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+	                elif data_type == "date":
+	                    value = datetime.strptime(value, "%Y-%m-%d").date()
+	                else:
+	                    value = str(value)
+	                new_row[key] = value
+	            except ValueError:
+	                messages.error(request, f"Invalid value for {key} in row {i + 1}.")
+	                return render(request, "csv_manager/add_data_csv.html", {"csv_entry": csv_entry, "schema": schema})
+
+	        new_rows.append(new_row)
+
+	    csv_changes = CSVChanges.objects.create(
+	        content_type=ContentType.objects.get_for_model(csv_entry),
+	        object_id=csv_entry.id,
+	        data=new_rows
+	    )
+
+	    apply_csv_changes.delay(csv_changes.id)
+	    messages.success(request, f"Successfully added {len(new_rows)} rows!")
+	    return redirect("my_csvs")
+
+    return render(request, "csv_manager/add_data_csv.html", {"csv_entry": csv_entry, "schema": schema, "is_derived": is_derived})
