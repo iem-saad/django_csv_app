@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>My CSVs</h2>
+
+{% if csvs %}
+<div class="accordion" id="uploadedCSVsAccordion">
+    {% for csv in csvs %}
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="heading{{ csv.id }}">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ csv.id }}" aria-expanded="true" aria-controls="collapse{{ csv.id }}">
+                {{ csv.name }} ({{ csv.status|title }}) - Uploaded on {{ csv.created_at }}
+            </button>
+        </h2>
+        <div id="collapse{{ csv.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ csv.id }}" data-bs-parent="#uploadedCSVsAccordion">
+            <div class="accordion-body">
+                <div class="mb-3 d-flex justify-content-between">
+                    <a href="{% url 'download_csv' csv.id %}" class="btn btn-sm btn-primary">Download Uploaded CSV</a>
+                    <button class="btn btn-sm btn-danger" onclick="deleteFile({{ csv.id }}, false)">Delete Uploaded CSV</button>
+                </div>
+                {% if csv.derived_csvs.exists %}
+                <h5>Derived CSVs</h5>
+                <ul class="list-group">
+                    {% for derived_csv in csv.derived_csvs.all %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ csv.name }} ({{ derived_csv.id }}) - Processed on {{ derived_csv.created_at }}
+                        <div>
+                            <a href="{% url 'download_derived_csv' derived_csv.id %}" class="btn btn-sm btn-success">Download</a>
+                            <button class="btn btn-sm btn-danger ms-2" onclick="deleteFile({{ derived_csv.id }}, true)">Delete</button>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>No derived CSVs available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-warning text-center" role="alert">
+    <strong>No CSVs Found!</strong> Please <a href="{% url 'home' %}" class="alert-link">upload a CSV file</a> from the home page to get started.
+</div>
+{% endif %}
+
+
+<script>
+    function deleteFile(id, isDerived) {
+        const url = isDerived ? `/delete_csv/${id}/derived/` : `/delete_csv/${id}/`;
+        if (confirm('Are you sure you want to delete this file?')) {
+            fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    location.reload();  // Reload the page to update the list
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
+</script>
+{% endblock %}

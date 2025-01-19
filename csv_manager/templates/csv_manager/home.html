@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="text-center">
+    <h1>Welcome to CSV Manager</h1>
+    <p>Upload and manage your CSV files efficiently.</p>
+    <form action="{% url 'upload_csv' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <input type="file" name="file" class="form-control" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload CSV</button>
+    </form>
+</div>
+{% endblock %}
