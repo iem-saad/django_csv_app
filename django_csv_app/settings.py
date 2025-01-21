@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-pjlfav9+%c*48lgb=^p9l53+c26g1xs#wj=41q=aag)bex(d-%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django-csv-app.onrender.com']
 
 
 # Application definition
