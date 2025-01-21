@@ -93,3 +93,11 @@ The dataset contains the following columns:
 - `Hour`: The hour of the record.
 - `PM2.5`: PM2.5 concentration values.
 
+## Project Demo Video
+
+For a comprehensive demonstration of how this project works, you can download and watch the demo video using the link below:
+
+- [Download Demo Video](https://github.com/iem-saad/django_csv_app/blob/master/demo-csv-manager.mp4)
+
+The video walks you through the key features of the application, including CSV uploads, data visualization, and more.
+
