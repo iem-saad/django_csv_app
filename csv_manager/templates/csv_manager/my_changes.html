@@ -36,7 +36,7 @@
                     <span class="badge bg-success">Processed</span>
                     {% endif %}
                 </td>
-                <td>
+                <td class="data-column">
                     <pre>{{ change.data|safe }}</pre>
                 </td>
             </tr>
@@ -61,4 +61,13 @@
             order: [[0, 'desc']],
         });
     });
-</script>{% endblock %}
+</script>
+
+<style>
+    .data-column {
+        max-width: 400px; 
+        word-wrap: break-word;
+        white-space: pre-wrap; 
+    }
+</style>
+{% endblock %}
