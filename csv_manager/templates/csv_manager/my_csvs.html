@@ -1,56 +1,85 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>My CSVs</h2>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">My CSVs</h2>
 
-{% if csvs %}
-<div class="accordion" id="uploadedCSVsAccordion">
-    {% for csv in csvs %}
-    <div class="accordion-item">
-        <h2 class="accordion-header" id="heading{{ csv.id }}">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ csv.id }}" aria-expanded="true" aria-controls="collapse{{ csv.id }}">
-                ( {{ csv.id }} ) {{ csv.name }} ({{ csv.status|title }}) - Uploaded on {{ csv.created_at }}
-            </button>
-        </h2>
-        <div id="collapse{{ csv.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ csv.id }}" data-bs-parent="#uploadedCSVsAccordion">
-            <div class="accordion-body">
-                <div class="mb-3 d-flex justify-content-between">
-                    <a href="{% url 'view_csv' csv.id %}" class="btn btn-sm text-white btn-info">View</a>
-                    <a href="{% url 'download_csv' csv.id %}" class="btn btn-sm btn-primary">Download Uploaded CSV</a>
-                    <a href="{% url 'add_data_csv' csv.id %}?is_derived=0" class="btn btn-sm btn-warning">Add Data</a>
-                    <a href="{% url 'visualize_csv' csv.id %}?is_derived=0" class="btn btn-sm btn-warning">Visualize</a>
-                    <button class="btn btn-sm btn-danger" onclick="deleteFile({{ csv.id }}, false)">Delete Uploaded CSV</button>
+    {% if csvs %}
+    <div class="alert alert-info" role="alert">
+        <h5 class="fw-bold">Understanding the Structure of Your CSVs</h5>
+        <p>
+            When you upload a CSV file, the system stores it as the <strong>original CSV</strong> without applying any filtering. Once the processing is complete, a <strong>derived CSV</strong> is created. 
+            This derived CSV contains the filtered data and can be accessed by expanding the accordions for any uploaded CSV.
+        </p>
+        <p>
+            If you make any changes to a CSV (uploaded or derived), the system will create a <strong>new derived CSV</strong>. Each derived CSV is grouped within its respective uploaded CSV accordion for easy navigation.
+        </p>
+        <p>
+            Use the buttons in each accordion to <strong>view</strong>, <strong>download</strong>, <strong>add data</strong>, or <strong>visualize</strong> the CSV files. If a CSV is still being processed, you'll need to wait for it to complete before performing any actions.
+        </p>
+    </div>
+    <div class="accordion" id="uploadedCSVsAccordion">
+        {% for csv in csvs %}
+        <div class="accordion-item mb-3 shadow-sm" style="border-radius: 8px; overflow: hidden;">
+            <h2 class="accordion-header" id="heading{{ csv.id }}">
+                <button class="accordion-button text-white" style="background: linear-gradient(to bottom right, #17a2b8, #6c757d);" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ csv.id }}" aria-expanded="true" aria-controls="collapse{{ csv.id }}">
+                    {{ csv.name }} ({{ csv.status|title }}) - Uploaded on {{ csv.created_at }}
+                </button>
+            </h2>
+            <div id="collapse{{ csv.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ csv.id }}" data-bs-parent="#uploadedCSVsAccordion">
+                <div class="accordion-body bg-light">
+                    {% if csv.status == "processed" %}
+                    <div class="d-flex justify-content-between mb-3">
+                        <a href="{% url 'view_csv' csv.id %}" class="btn btn-sm text-white btn-primary">View</a>
+                        <a href="{% url 'download_csv' csv.id %}" class="btn btn-sm btn-success" target="_blank">Download Uploaded CSV</a>
+                        <a href="{% url 'add_data_csv' csv.id %}?is_derived=0" class="btn btn-sm btn-warning text-white">Add Data</a>
+                        <a href="{% url 'visualize_csv' csv.id %}?is_derived=0" class="btn btn-sm btn-secondary">Visualize</a>
+                        <button class="btn btn-sm btn-danger" onclick="deleteFile({{ csv.id }}, false)">Delete Uploaded CSV</button>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        This CSV is currently being processed. You will be able to perform actions once processing is complete.
+                    </div>
+                    {% endif %}
+
+                    {% if csv.derived_csvs.exists %}
+                    <h5 class="fw-bold text-primary">Derived CSVs</h5>
+                    <ul class="list-group">
+                        {% for derived_csv in csv.derived_csvs.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light border-0 shadow-sm mb-2">
+                            <div>
+                                {{ derived_csv.parent.name }} ({{ derived_csv.id }}) - Processed on {{ derived_csv.created_at }}
+                            </div>
+                            {% if derived_csv.parent.status == "processed" %}
+                            <div>
+                                <a href="{% url 'view_csv_derived' derived_csv.id %}" class="btn btn-sm text-white btn-primary">View</a>
+                                <a href="{% url 'download_derived_csv' derived_csv.id %}" class="btn btn-sm btn-success" target="_blank">Download</a>
+                                <a href="{% url 'add_data_csv' derived_csv.id %}?is_derived=1" class="btn btn-sm btn-warning text-white">Add Data</a>
+                                <a href="{% url 'visualize_csv' derived_csv.id %}?is_derived=1" class="btn btn-sm btn-secondary">Visualize</a>
+                                <button class="btn btn-sm btn-danger ms-2" onclick="deleteFile({{ derived_csv.id }}, true)">Delete</button>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info mb-0">
+                                This derived CSV is currently being processed. Please wait for the process to complete.
+                            </div>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted">No derived CSVs available.</p>
+                    {% endif %}
                 </div>
-                {% if csv.derived_csvs.exists %}
-                <h5>Derived CSVs</h5>
-                <ul class="list-group">
-                    {% for derived_csv in csv.derived_csvs.all %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ csv.name }} ({{ derived_csv.id }}) - Processed on {{ derived_csv.created_at }}
-                        <div>
-                            <a href="{% url 'view_csv_derived' derived_csv.id %}" class="btn btn-sm text-white btn-info">View</a>
-                            <a href="{% url 'download_derived_csv' derived_csv.id %}" class="btn btn-sm btn-success">Download</a>
-                            <a href="{% url 'add_data_csv' derived_csv.id %}?is_derived=1" class="btn btn-sm btn-warning">Add Data</a>
-                            <a href="{% url 'visualize_csv' derived_csv.id %}?is_derived=1" class="btn btn-sm btn-warning">Visualize</a>
-                            <button class="btn btn-sm btn-danger ms-2" onclick="deleteFile({{ derived_csv.id }}, true)">Delete</button>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p>No derived CSVs available.</p>
-                {% endif %}
             </div>
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
+    {% else %}
+    <div class="alert alert-warning text-center" role="alert">
+        <strong>No CSVs Found!</strong> Please <a href="{% url 'home' %}" class="alert-link">upload a CSV file</a> from the home page to get started.
+    </div>
+    {% endif %}
 </div>
-{% else %}
-<div class="alert alert-warning text-center" role="alert">
-    <strong>No CSVs Found!</strong> Please <a href="{% url 'home' %}" class="alert-link">upload a CSV file</a> from the home page to get started.
-</div>
-{% endif %}
-
 
 <script>
     function deleteFile(id, isDerived) {

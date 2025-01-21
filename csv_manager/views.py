@@ -40,6 +40,12 @@ def upload_csv(request):
 
         # Save the parsed data to the database
         uploaded_csv = UploadedCSV.objects.create(name=name, content=json.dumps(decoded_file))
+
+        messages.success(
+            request, 
+            "Your CSV has been uploaded and is being processed. It will be ready to view shortly.",
+            extra_tags='success'
+        )
         
         process_csv.delay(uploaded_csv.id)
 
