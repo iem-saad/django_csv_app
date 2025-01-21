@@ -57,7 +57,7 @@ class CSVChanges(models.Model):
     csv_entry = GenericForeignKey('content_type', 'object_id')
 
     # Data fields
-    data = models.JSONField()  # Stores the new row as JSON
+    data = models.JSONField()
     status = models.CharField(
         max_length=20,
         choices=[('pending', 'Pending'), ('processed', 'Processed')],
