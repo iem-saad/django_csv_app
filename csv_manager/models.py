@@ -57,4 +57,4 @@ class CSVChanges(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"CSVChanges (ID: {self.id}) for {self.csv_entry.name} - Status: {self.get_status_display()}"
+        return f"CSVChanges (ID: {self.id}) - Status: {self.get_status_display()}"

@@ -1,7 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>Viewing: {{ csv_entry.name }}</h2>
+<h2>Viewing: {{ is_derived|yesno:"Uploaded,Derived" }} CSV: {{ csv_entry.name }}</h2>
+
+<div id="loader" class="text-center my-5">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p>Loading data...</p>
+</div>
 
 <table id="csvTable" class="table table-striped table-bordered">
     <thead>
@@ -30,7 +37,14 @@
 <script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('#csvTable').DataTable();
+        // Initialize DataTable
+        $('#csvTable').DataTable({
+            initComplete: function() {
+                // Hide the loader and show the table once DataTable is initialized
+                $('#loader').hide();
+                $('#tableContainer').fadeIn();
+            }
+        });
     });
 </script>
 {% endblock %}
