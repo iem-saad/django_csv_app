@@ -36,6 +36,10 @@
                         <a href="{% url 'visualize_csv' csv.id %}?is_derived=0" class="btn btn-sm btn-secondary">Visualize</a>
                         <button class="btn btn-sm btn-danger" onclick="deleteFile({{ csv.id }}, false)">Delete Uploaded CSV</button>
                     </div>
+                    {% elif csv.status == "failed_processing" %}
+                    <div class="alert alert-danger">
+                        There was an error in processing this csv. Error is: {{ csv.failure_reason }}
+                    </div>
                     {% else %}
                     <div class="alert alert-info">
                         This CSV is currently being processed. You will be able to perform actions once processing is complete.
@@ -57,6 +61,10 @@
                                 <a href="{% url 'add_data_csv' derived_csv.id %}?is_derived=1" class="btn btn-sm btn-warning text-white">Add Data</a>
                                 <a href="{% url 'visualize_csv' derived_csv.id %}?is_derived=1" class="btn btn-sm btn-secondary">Visualize</a>
                                 <button class="btn btn-sm btn-danger ms-2" onclick="deleteFile({{ derived_csv.id }}, true)">Delete</button>
+                            </div>
+                            {% elif derived_csv.parent.status == "failed_processing" %}
+                            <div class="alert alert-danger">
+                                There was an error in processing this csv. Error is: {{ derived_csv.parent.failure_reason }}
                             </div>
                             {% else %}
                             <div class="alert alert-info mb-0">

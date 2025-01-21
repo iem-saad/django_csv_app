@@ -10,6 +10,7 @@ class UploadedCSV(models.Model):
         ('unprocessed', 'Unprocessed'),
         ('processing', 'Processing'),
         ('processed', 'Processed'),
+        ('failed_processing', 'Failed Processing'),
     ]
 
     name = models.CharField(max_length=255)
@@ -20,6 +21,7 @@ class UploadedCSV(models.Model):
         choices=STATUS_CHOICES,
         default='unprocessed',
     )
+    failure_reason = models.TextField(null=True, blank=True) 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -33,6 +35,13 @@ class DerivedCSV(models.Model):
     parent = models.ForeignKey(UploadedCSV, on_delete=models.CASCADE, related_name='derived_csvs')
     content = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def name(self):
+        """
+        Return the name of the parent UploadedCSV as the name of this DerivedCSV.
+        """
+        return f"Derived of {self.parent.name}"
 
     def __str__(self):
         return f"DerivedCSV from {self.parent.name} at {self.created_at}"

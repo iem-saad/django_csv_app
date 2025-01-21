@@ -1,3 +1,4 @@
 django
 redis
 celery[redis]
+pandas

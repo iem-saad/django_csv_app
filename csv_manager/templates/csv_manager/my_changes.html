@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">My Changes</h2>
+
+    {% if changes %}
+    <table id="changesTable" class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Associated CSV</th>
+                <th>Change Date</th>
+                <th>Status</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for change in changes %}
+            <tr>
+                <td>{{ change.id }}</td>
+                <td>
+                    {% if change.csv_entry %}
+                    <a href="{% url 'view_csv' change.csv_entry.id %}?is_derived={{ change.is_derived|yesno:'1,0' }}">
+                        {{ change.csv_entry.name }}
+                    </a>
+                    {% else %}
+                    Unknown CSV
+                    {% endif %}
+                </td>
+                <td>{{ change.created_at }}</td>
+                <td>
+                    {% if change.status == 'pending' %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                    {% elif change.status == 'processed' %}
+                    <span class="badge bg-success">Processed</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <pre>{{ change.data|safe }}</pre>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-warning text-center">
+        <strong>No Changes Found!</strong>
+        You haven't made any changes to any CSV yet.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Include Bootstrap DataTables scripts -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#changesTable').DataTable({
+            order: [[0, 'desc']],
+        });
+    });
+</script>{% endblock %}

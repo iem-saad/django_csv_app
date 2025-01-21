@@ -1,3 +1,5 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,6 +44,20 @@
         .alert {
             margin-top: 1rem;
             animation: fadeIn 0.5s ease;
+        }
+        .home-background {
+            background-image: url('/static/images/background-home.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
         }
         #clock {
             display: flex;
@@ -95,6 +111,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'my_csvs' %}">My CSVs</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'my_changes' %}">My Changes</a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -110,7 +129,7 @@
         </div>
     {% endif %}
 
-    <div class="container content">
+    <div class="container-fluid content {% if is_home %}home-background{% endif %}">
         {% block content %}
         {% endblock %}
     </div>

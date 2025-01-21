@@ -15,7 +15,7 @@ def home(request):
     """
     Render the homepage with the CSV upload form.
     """
-    return render(request, 'csv_manager/home.html')
+    return render(request, 'csv_manager/home.html', {'is_home': True})
 
 def my_csvs(request):
     """
@@ -177,6 +177,9 @@ def visualize_csv(request, csv_id):
         content = csv_entry.content
         schema = csv_entry.schema
 
+    # Slice content to last 400 records for better view
+    content = content[-400:] if len(content) > 400 else content
+
     allowed_columns = {col: col_type for col, col_type in schema.items() if col_type != 'string'}
 
     return render(request, 'csv_manager/visualize_csv.html', {
@@ -186,3 +189,15 @@ def visualize_csv(request, csv_id):
         'allowed_columns': allowed_columns,
         'is_derived': is_derived
     })
+
+def my_changes(request):
+    """
+    View to display all changes recorded in the CSVChanges table.
+    """
+    changes = CSVChanges.objects.all().order_by('-id')
+
+    # Add a derived flag to each change
+    for change in changes:
+        change.is_derived = change.content_type.model == 'derivedcsv'
+
+    return render(request, 'csv_manager/my_changes.html', {'changes': changes})

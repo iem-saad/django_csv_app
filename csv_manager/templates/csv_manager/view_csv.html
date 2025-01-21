@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>Viewing: {{ is_derived|yesno:"Uploaded,Derived" }} CSV: {{ csv_entry.name }}</h2>
+<h2>Viewing CSV: {{ csv_entry.name }}</h2>
 
 <div id="loader" class="text-center my-5">
     <div class="spinner-border text-primary" role="status">

@@ -8,70 +8,112 @@ from django.contrib.contenttypes.models import ContentType
 import copy
 import json
 from .utils import send_csv_email
+import pandas as pd
+from io import StringIO
+
 
 @shared_task
 def process_csv(uploaded_csv_id):
     """
     Celery task to process the uploaded CSV:
-    Normalize headers, infer schema, process integer columns, and save as a DerivedCSV.
+    Normalize headers, infer schema using pandas with datetime detection, and save as a DerivedCSV.
     """
     try:
         uploaded_csv = UploadedCSV.objects.get(id=uploaded_csv_id)
+        uploaded_csv.status = 'processing'
+        uploaded_csv.save()
+
         raw_csv = json.loads(uploaded_csv.content)  # Load raw CSV string stored as JSON
 
-        reader = csv.reader(io.StringIO(raw_csv))
-        rows = list(reader)
+        # Load the raw CSV into pandas DataFrame
+        df = pd.read_csv(StringIO(raw_csv))
 
-        headers = rows[0]
-        normalized_headers = [
-            re.sub(r'[^\w\s]', '', col).strip().replace(' ', '_').lower() for col in headers
-        ]
+        # Normalize column headers
+        df.columns = [re.sub(r'[^\w\s]', '', col).strip().replace(' ', '_').lower() for col in df.columns]
 
-        normalized_data = []
-        for row in rows[1:]:
-            normalized_data.append(dict(zip(normalized_headers, row)))
+        # Infer schema using pandas with datetime detection
+        schema = infer_schema_with_pandas(df)
 
-        csv_content = "\n".join(
-            [",".join(normalized_headers)] +
-            [",".join(str(value) for value in row.values()) for row in normalized_data]
-        )
-        schema = infer_schema(csv_content)
+        # Normalize data based on inferred schema
+        for column, col_type in schema.items():
+            if col_type == "datetime":
+                df[column] = pd.to_datetime(df[column], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+                df[column] = df[column].dt.strftime("%Y-%m-%d %H:%M:%S")  # Convert datetime to string
+            elif col_type == "date":
+                df[column] = pd.to_datetime(df[column], format="%Y-%m-%d", errors="coerce").dt.date
+                df[column] = df[column].astype(str)  # Convert date to string for JSON serialization
 
+        normalized_data = df.to_dict(orient="records")
+
+        # Save normalized data and schema
         uploaded_csv.schema = schema
         uploaded_csv.content = normalized_data
         uploaded_csv.save()
 
+        # Process the data (e.g., divide integers/floats)
         processed_data = []
         for row in normalized_data:
             processed_row = {}
             for key, value in row.items():
-                if schema[key] == "integer" and value.isdigit():
+                if schema[key] == "integer" and pd.notna(value):
                     processed_row[key] = int(value) // 2
+                elif schema[key] == "float" and pd.notna(value):
+                    processed_row[key] = float(value) / 2
                 else:
                     processed_row[key] = value
             processed_data.append(processed_row)
 
+        # Create a DerivedCSV entry
         DerivedCSV.objects.create(parent=uploaded_csv, content=processed_data)
 
-        output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=normalized_headers)
-        writer.writeheader()
-        writer.writerows(processed_data)
-        csv_attachment = output.getvalue()
-
-        subject = "Your Processed CSV is Ready!"
-        message = "The CSV you uploaded has been successfully processed. Please find the filtered CSV attached."
-        send_csv_email('testuser@gmail.com', subject, message, csv_attachment)
-
+        # Mark the uploaded CSV as processed
         uploaded_csv.status = 'processed'
         uploaded_csv.save()
 
     except UploadedCSV.DoesNotExist:
         print(f"UploadedCSV with ID {uploaded_csv_id} does not exist.")
     except Exception as e:
-        print(f"Error processing CSV: {e}")
+        error_message = str(e)
+        uploaded_csv.status = 'failed_processing'
+        uploaded_csv.failure_reason = error_message
+        uploaded_csv.save()
+        print(f"Error processing CSV: {error_message}")
 
+def infer_schema_with_pandas(df):
+    """
+    Infer the schema of a pandas DataFrame, including datetime detection.
+    Returns a dictionary with column names as keys and data types as values.
+    """
+    dtype_mapping = {
+        "int64": "integer",
+        "float64": "float",
+        "object": "string",
+    }
 
+    schema = {}
+    for column in df.columns:
+        dtype = str(df[column].dtypes)
+
+        # Check if column is datetime-like
+        if dtype == "object":  # Likely a string column
+            try:
+                pd.to_datetime(df[column], format="%Y-%m-%d %H:%M:%S", errors="raise")
+                schema[column] = "datetime"
+                continue
+            except ValueError:
+                try:
+                    pd.to_datetime(df[column], format="%Y-%m-%d", errors="raise")
+                    schema[column] = "date"
+                    continue
+                except ValueError:
+                    pass  # If both fail, fallback to string
+
+        # Map the dtype using the standard mapping
+        schema[column] = dtype_mapping.get(dtype, "string")  # Default to "string"
+
+    return schema
+
+# This function is not used for now.
 def infer_schema(csv_content):
     """
     Infer the schema of a CSV file based on its content.
@@ -90,7 +132,8 @@ def infer_schema(csv_content):
     # Analyze rows to infer data types
     for row in rows[1:]:
         for col, value in zip(header, row):
-            if value.strip():  # Ignore empty values
+            value = value.strip()  # Trim whitespace
+            if value:  # Ignore empty values
                 inferred_type = "string"
                 try:
                     int(value)
@@ -101,7 +144,7 @@ def infer_schema(csv_content):
                         inferred_type = "float"
                     except ValueError:
                         try:
-                            datetime.strptime(value, "%Y-%m-%d %H:%M:%S")  # Adjust the format as needed
+                            datetime.strptime(value, "%Y-%m-%d %H:%M:%S")  # Adjust format as needed
                             inferred_type = "datetime"
                         except ValueError:
                             try:
@@ -156,3 +199,16 @@ def apply_csv_changes(changes_id):
     except Exception as e:
         return f"Error applying CSVChanges {changes_id}: {e}"
 
+
+def retry_failed_and_unprocessed_csvs():
+    """
+    Celery task to retry processing CSVs with 'unprocessed' or 'failed_processing' status.
+    """
+    try:
+        csvs_to_retry = UploadedCSV.objects.filter(status__in=['unprocessed', 'failed_processing'])
+        
+        for csv in csvs_to_retry:
+            print(f"Retrying processing for CSV: {csv.id} - {csv.name}")
+            process_csv.delay(csv.id)
+    except Exception as e:
+        print(f"Error retrying failed and unprocessed CSVs: {e}")

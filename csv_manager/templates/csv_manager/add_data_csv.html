@@ -1,7 +1,23 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>Adding Data to: {{ is_derived|yesno:"Derived,Uploaded" }} CSV: {{ csv_entry.name }}</h2>
+<h2>Adding Data to CSV: {{ csv_entry.name }}</h2>
+
+<div class="alert alert-info" role="alert">
+    <h5 class="fw-bold">How to Add Data to Your CSVs</h5>
+    <p>
+        The <strong>Add Data</strong> feature allows you to append new rows to both <strong>uploaded</strong> and <strong>derived</strong> CSVs. To help you understand the structure of the existing data, the last 100 rows of the CSV are displayed at the top of the page.
+    </p>
+    <p>
+        Below the displayed data, you'll find input fields dynamically generated based on the CSV's structure (schema). Use these fields to enter the data for a new row. You can click the <strong>Add Row</strong> button to add additional rows for batch submission.
+    </p>
+    <p>
+        Once you've added all the required rows, click the <strong>Save Rows</strong> button to save the changes. These changes are stored in the system's database as a record of modifications but are not applied to the CSV immediately. This approach prevents system timeout issues for large CSV files.
+    </p>
+    <p>
+        A background task will process the saved changes and append the new rows to the CSV. Once the process is complete, a <strong>new derived CSV</strong> will be created that includes the updated data. You can access the newly derived CSV in the accordion under its parent uploaded CSV.
+    </p>
+</div>
 
 <div id="loader" class="text-center my-5">
     <div class="spinner-border text-primary" role="status">
