@@ -133,3 +133,7 @@ CELERY_RESULT_EXTENDED = True  # Enable extended task results (optional)
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://django-csv-app.onrender.com'
+]
