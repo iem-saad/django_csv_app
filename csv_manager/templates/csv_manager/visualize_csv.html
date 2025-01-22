@@ -92,58 +92,108 @@
         if (mode === 'univariate') {
             const column = document.getElementById('uniColumn').value;
             const chartType = document.getElementById('uniChartType').value;
-            const data = content.map(row => parseFloat(row[column]));
 
-            chart = new Chart(ctx, {
-                type: chartType,
-                data: {
-                    labels: Array.from({ length: data.length }, (_, i) => i + 1),
-                    datasets: [{
-                        label: column,
-                        data: data,
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 2,
-                        hoverBackgroundColor: 'rgba(75, 192, 192, 0.8)'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: `Univariate Analysis: ${column}`
-                        },
-                        tooltip: {
-                            enabled: true,
-                            mode: 'index',
-                            intersect: false
-                        },
+            if (chartType === 'pie') {
+                // Aggregate data for pie chart
+                const aggregatedData = {};
+                content.forEach(row => {
+                    const value = row[column];
+                    if (aggregatedData[value]) {
+                        aggregatedData[value]++;
+                    } else {
+                        aggregatedData[value] = 1;
+                    }
+                });
+
+                // Prepare labels and data for top 10 categories
+                const labels = Object.keys(aggregatedData).slice(0, 10); // Top 10 categories
+                const data = labels.map(label => aggregatedData[label]);
+                const othersSum = Object.values(aggregatedData)
+                    .slice(10)
+                    .reduce((sum, val) => sum + val, 0);
+
+                if (othersSum > 0) {
+                    labels.push('Others');
+                    data.push(othersSum);
+                }
+
+                // Create the pie chart
+                chart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: labels.map((_, i) => `hsl(${i * 30}, 70%, 50%)`),
+                            hoverBackgroundColor: labels.map((_, i) => `hsl(${i * 30}, 70%, 60%)`),
+                            borderWidth: 1
+                        }]
                     },
-                    scales: {
-                        x: {
+                    options: {
+                        responsive: true,
+                        plugins: {
                             title: {
                                 display: true,
-                                text: 'Row Index',
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
-                                }
+                                text: `Univariate Analysis: ${column} (Top Categories)`
+                            },
+                            tooltip: {
+                                enabled: true,
+                                mode: 'index',
+                                intersect: false
                             }
-                        },
-                        y: {
+                        }
+                    }
+                });
+            } else {
+                // Non-pie chart (bar or line)
+                const data = content.map(row => parseFloat(row[column]) || 0);
+
+                chart = new Chart(ctx, {
+                    type: chartType,
+                    data: {
+                        labels: Array.from({ length: data.length }, (_, i) => i + 1),
+                        datasets: [{
+                            label: column,
+                            data: data,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            hoverBackgroundColor: 'rgba(75, 192, 192, 0.8)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
                             title: {
                                 display: true,
-                                text: column,
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
+                                text: `Univariate Analysis: ${column}`
+                            },
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Row Index',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: column,
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
         } else if (mode === 'multivariate') {
             const chartType = document.getElementById('chartType').value;
             const xAxis = document.getElementById('xAxis').value;
@@ -171,31 +221,18 @@
                             display: true,
                             text: `Multivariate Analysis: ${xAxis} vs ${yAxis.join(', ')}`
                         },
-                        tooltip: {
-                            enabled: true,
-                            mode: 'index',
-                            intersect: false
-                        },
                     },
                     scales: {
                         x: {
                             title: {
                                 display: true,
-                                text: xAxis,
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
-                                }
+                                text: xAxis
                             }
                         },
                         y: {
                             title: {
                                 display: true,
-                                text: yAxis.join(', '),
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
-                                }
+                                text: yAxis.join(', ')
                             }
                         }
                     }
